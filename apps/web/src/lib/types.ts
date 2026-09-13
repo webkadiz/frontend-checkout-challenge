@@ -1,0 +1,57 @@
+import type { createHashRouter } from 'react-router';
+
+/** Данные ответа API и метаданные для сохранения и повторных запросов. */
+export type Reply<T> = {
+  /** Тело ответа в формате вызываемого метода. */
+  data: T;
+  /** HTTP-статус ответа. */
+  status: number;
+  /** Версия ресурса; null, если сервер не прислал ETag. */
+  etag: string | null;
+  /** Задержка перед повторным запросом в миллисекундах. */
+  retryMs: number;
+};
+
+/** Ошибка проверки отдельного поля запроса. */
+export type ValidationField = {
+  /** Путь к полю, которое не прошло проверку. */
+  path: string;
+  /** Описание ошибки для пользователя. */
+  message: string;
+};
+
+/** Содержимое ошибки, возвращаемой API. */
+export type ApiErrorBody = {
+  /** Общее описание ошибки. */
+  message?: string;
+  /** Машиночитаемый код ошибки. */
+  code?: string;
+  /** Ошибки проверки отдельных полей. */
+  fields?: ValidationField[];
+};
+
+/** Обёртка ответа API с необязательным описанием ошибки. */
+export type ApiErrorResponse = {
+  /** Детали ошибки, если они присутствуют в ответе. */
+  error?: ApiErrorBody;
+};
+
+/** Разделы магазина, представленные маршрутами приложения. */
+export type Page = 'catalog' | 'checkout' | 'orders' | 'order';
+
+/** Режим перехода: новая запись истории или замена текущей. */
+export type HistoryMode = 'push' | 'replace';
+
+/** Экземпляр hash-маршрутизатора магазина. */
+export type ShopRouter = ReturnType<typeof createHashRouter>;
+
+/** Обработчик смены раздела и идентификатора открытого заказа. */
+export type NavigationListener = (page: Page, orderId: string | null) => void;
+
+/** Сохранённая попытка для безопасного повтора запроса. */
+export type Attempt<B> = {
+  /** Ключ идемпотентности, общий для повторов одной попытки. */
+  key: string;
+  /** Исходное тело запроса, неизменное при повторе. */
+  body: B;
+};

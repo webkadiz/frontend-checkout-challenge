@@ -1,0 +1,102 @@
+.quantityControl {
+  composes: quantitycontrol from '../App.module.scss';
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 5px;
+
+  & button {
+    border: 1px solid #cdd3c0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 15px;
+    display: grid;
+    place-items: center;
+  }
+
+  & output {
+    min-width: 2ch;
+    text-align: center;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.quantityValue {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 24px;
+}
+
+.quantityProgress {
+  position: absolute;
+  inset: 0 -2px;
+  border: 1.5px solid #d8dece;
+  border-top-color: #536a3f;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.isLoading .quantityProgress {
+  animation:
+    spin 0.85s linear infinite,
+    indicator-appear 0.2s ease 150ms forwards;
+}
+
+@keyframes indicator-appear {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.quantityControl button:focus-visible:not(:disabled, [aria-disabled='true']) {
+  background: #3d5033;
+  border-color: #3d5033;
+  color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .quantityControl button:hover:not(:disabled, [aria-disabled='true']) {
+    background: #3d5033;
+    border-color: #3d5033;
+    color: #fff;
+    box-shadow: 0 3px 7px #35472f20;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .isLoading .quantityProgress {
+    opacity: 1;
+  }
+}
+
+@media (width <= 650px), (pointer: coarse) {
+  .quantityControl {
+    gap: 6px;
+
+    & button {
+      width: 44px;
+      height: 44px;
+      font-size: 18px;
+    }
+
+    & output {
+      font-size: 14px;
+    }
+  }
+
+  .quantityValue {
+    min-width: 24px;
+    height: 32px;
+  }
+}

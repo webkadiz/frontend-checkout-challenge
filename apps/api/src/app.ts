@@ -20,6 +20,7 @@ declare module 'fastify' {
     sessionToken: string;
   }
 }
+
 type Options = {
   dataFile?: string;
   paymentDelayMs?: number;
@@ -27,8 +28,11 @@ type Options = {
   corsOrigins?: string[];
   now?: () => number;
 };
+
 type Request = FastifyRequest<{ Params: Record<string, string>; Body: unknown }>;
+
 type Links = Static<typeof C.Links>;
+
 type Route = {
   current?: (request: Request) => boolean;
   tag: string;
@@ -43,22 +47,29 @@ type Route = {
   description?: string;
   public?: boolean;
 };
+
 const link = (href: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET') => ({
   href,
   method,
 });
+
 const idParams = (name: string) => Type.Object({ [name]: C.Id }, { additionalProperties: false });
+
 const productParams = Type.Object(
   { productId: Type.String({ minLength: 1, maxLength: 100 }) },
   { additionalProperties: false },
 );
+
 const metadataHeaders = { 'X-Request-Id': Type.String(), 'Cache-Control': Type.String() };
+
 const isApiUrl = (url: string) => /^\/api(?:\/|$)/.test(url.split('?')[0]);
 
 // OpenAPI 3.0 uses example; JSON Schema uses examples.
 function openApiAnnotations(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(openApiAnnotations);
+
   if (!value || typeof value !== 'object') return value;
+
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) =>
       key === 'examples' && Array.isArray(item)
@@ -79,10 +90,12 @@ export async function buildApp(options: Options = {}) {
   });
   const store = new Store(options.dataFile, options.paymentDelayMs ?? 1200, options.now);
   const parseJson = app.getDefaultJsonParser('error', 'error');
+
   app.removeContentTypeParser('application/json');
   app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (request, body, done) => {
     if (!isUtf8(body as Buffer))
       return done(new DomainError(400, 'INVALID_UTF8', 'JSON должен быть в UTF-8.'));
+
     parseJson(request, (body as Buffer).toString('utf8'), done);
   });
 
@@ -90,12 +103,15 @@ export async function buildApp(options: Options = {}) {
     const path = url.split('?')[0];
     const methods: HTTPMethods[] = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'TRACE'];
     const allowed = methods.filter((method) => app.findRoute({ method, url: path }));
+
     return allowed.length ? [...allowed, 'OPTIONS'].sort() : undefined;
   };
+
   app.addSchema({ $id: 'ErrorResponse', ...C.ErrorResponse });
   app.decorateRequest('sessionToken', '');
   app.addHook('onRequest', async (request, reply) => {
     reply.header('X-Request-Id', request.id);
+
     if (isApiUrl(request.url)) reply.header('Cache-Control', 'no-store');
   });
   await app.register(cors, {
@@ -129,36 +145,49 @@ export async function buildApp(options: Options = {}) {
   });
   app.addHook('onRequest', async (request, reply) => {
     const allowed = allowedMethods(request.url);
+
     if (request.method === 'OPTIONS') {
       if (request.url === '*')
         return reply.header('Allow', 'GET, HEAD, POST, PUT, DELETE, OPTIONS').code(204).send();
+
       if (!allowed) throw new DomainError(404, 'ROUTE_NOT_FOUND', 'Маршрут не найден.');
+
       reply.header('Allow', allowed.join(', ')).header('Cache-Control', 'no-store');
+
       if (request.headers.origin) reply.header('Access-Control-Allow-Methods', allowed.join(', '));
+
       return reply.code(204).send();
     }
+
     if (allowed && !allowed.includes(request.method)) {
       reply.header('Allow', allowed.join(', '));
+
       throw new DomainError(405, 'METHOD_NOT_ALLOWED', 'Метод не поддерживается для этого адреса.');
     }
+
     if (!isApiUrl(request.url)) return;
+
     const hasBody =
       Number(request.headers['content-length'] ?? 0) > 0 ||
       request.headers['transfer-encoding'] !== undefined;
+
     if (['GET', 'HEAD', 'DELETE'].includes(request.method) && hasBody)
       throw new DomainError(400, 'REQUEST_BODY_NOT_ALLOWED', 'Этот запрос не принимает тело.');
+
     if (
       hasBody &&
       request.headers['content-encoding'] !== undefined &&
       request.headers['content-encoding'].trim().toLowerCase() !== 'identity'
     ) {
       reply.header('Accept-Encoding', 'identity');
+
       throw new DomainError(
         415,
         'UNSUPPORTED_CONTENT_ENCODING',
         'Сжатое тело запроса не поддерживается.',
       );
     }
+
     if (
       ['POST', 'PUT'].includes(request.method) &&
       hasBody &&
@@ -176,16 +205,21 @@ export async function buildApp(options: Options = {}) {
       request.url.split('?')[0] === '/assets/demo.svg'
     )
       return conditionalRead(request, reply, payload);
+
     return payload;
   });
   await app.register(swagger, {
     transform: ({ schema, url }) => ({ schema: openApiAnnotations(schema) as FastifySchema, url }),
     transformObject(document) {
       if (!('openapiObject' in document)) return document.swaggerObject;
+
       const { openapiObject } = document;
+
       for (const path of Object.values(openapiObject.paths ?? {})) {
         if (!path) continue;
+
         const baseOperation = path.get ?? path.post ?? path.put ?? path.delete;
+
         if (path.get)
           path.head = {
             ...path.get,
@@ -194,11 +228,14 @@ export async function buildApp(options: Options = {}) {
             responses: Object.fromEntries(
               Object.entries(path.get.responses).map(([status, response]) => {
                 const copy = { ...response };
+
                 if ('content' in copy) delete copy.content;
+
                 return [status, copy];
               }),
             ),
           };
+
         path.options = {
           operationId: `options_${baseOperation?.operationId}`,
           tags: ['HTTP'],
@@ -216,6 +253,7 @@ export async function buildApp(options: Options = {}) {
           },
         };
       }
+
       return openapiObject;
     },
     openapi: {
@@ -290,6 +328,7 @@ export async function buildApp(options: Options = {}) {
       path: `${err.validationContext ?? 'body'}${issue.instancePath}${issue.params.missingProperty ? `/${issue.params.missingProperty}` : ''}`,
       message: issue.message ?? 'Некорректное значение.',
     }));
+
     if (status === 401)
       reply.header(
         'WWW-Authenticate',
@@ -297,7 +336,9 @@ export async function buildApp(options: Options = {}) {
           ? 'Bearer realm="checkout"'
           : 'Bearer realm="checkout", error="invalid_token"',
       );
+
     if (status === 500) request.log.error({ err }, 'Request failed');
+
     reply.removeHeader('ETag').removeHeader('Location').removeHeader('Retry-After');
     reply.status(status).send({
       error: { code, message, ...(fields ? { fields } : {}) },
@@ -316,13 +357,18 @@ export async function buildApp(options: Options = {}) {
 
   const authorize = async (request: FastifyRequest) => {
     const header = request.headers.authorization;
+
     if (!header)
       throw new DomainError(401, 'SESSION_REQUIRED', 'Передайте токен сессии в Authorization.');
+
     const match = /^Bearer +([0-9a-f-]{36})$/i.exec(header);
+
     if (!match) throw new DomainError(401, 'SESSION_INVALID', 'Некорректный токен сессии.');
+
     store.session(match[1]);
     request.sessionToken = match[1];
   };
+
   function add(
     method: HTTPMethods,
     url: string,
@@ -380,12 +426,14 @@ export async function buildApp(options: Options = {}) {
             },
       ]),
     );
+
     if (method === 'GET')
       responses[304] = {
         type: 'null',
         description: 'Условие If-None-Match совпало; без тела.',
         headers: metadataHeaders,
       };
+
     for (const [status, description] of Object.entries(errors))
       responses[status] = {
         $ref: 'ErrorResponse#',
@@ -402,6 +450,7 @@ export async function buildApp(options: Options = {}) {
             : {}),
         },
       };
+
     app.route({
       method,
       url,
@@ -443,9 +492,12 @@ export async function buildApp(options: Options = {}) {
   }
   function respond<T>(r: FastifyRequest, reply: FastifyReply, data: T, links: Links, status = 200) {
     if ([201, 202].includes(status)) reply.header('Location', links.self.href);
+
     if (status === 202) reply.header('Retry-After', '1');
+
     return reply.code(status).send({ data, meta: { requestId: r.id }, links });
   }
+
   const orderLinks = (order: C.Order): Links => ({
     self: link(`/api/orders/${order.id}`),
     payments: link(`/api/orders/${order.id}/payments`),
@@ -512,6 +564,7 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       const s = store.createSession();
+
       return respond(
         r,
         p,
@@ -589,6 +642,7 @@ export async function buildApp(options: Options = {}) {
     { tag: 'Cart', id: 'getCart', summary: 'Корзина', data: C.CartSchema },
     (r, p) => {
       const cart = store.cart(r.sessionToken);
+
       return respond(r, p, cart, {
         self: link('/api/cart'),
         checkoutOptions: link('/api/checkout/options'),
@@ -627,6 +681,7 @@ export async function buildApp(options: Options = {}) {
       current: (r) => {
         if (!products.some((p) => p.id === r.params.productId))
           throw new DomainError(404, 'PRODUCT_NOT_FOUND', 'Товар не найден.');
+
         return store.cart(r.sessionToken).items.some((i) => i.productId === r.params.productId);
       },
       summary: 'Установить количество товара',
@@ -644,6 +699,7 @@ export async function buildApp(options: Options = {}) {
         r.params.productId,
         (r.body as Static<typeof C.SetCartItemBody>).quantity,
       );
+
       return respond(
         r,
         p,
@@ -669,6 +725,7 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       store.removeItem(r.sessionToken, r.params.productId);
+
       return p.header('Link', '</api/cart>; rel="collection"').code(204).send();
     },
   );
@@ -683,6 +740,7 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       const cart = store.cart(r.sessionToken);
+
       return respond(
         r,
         p,
@@ -711,6 +769,7 @@ export async function buildApp(options: Options = {}) {
     (r, p) => {
       const body = r.body as Static<typeof C.QuoteBody>;
       const q = store.quote(r.sessionToken, body.cartVersion, body.delivery);
+
       return respond(r, p, q, quoteLinks(q, r.sessionToken), 201);
     },
   );
@@ -729,6 +788,7 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       const q = store.getQuote(r.sessionToken, r.params.quoteId);
+
       return respond(r, p, q, quoteLinks(q, r.sessionToken));
     },
   );
@@ -756,6 +816,7 @@ export async function buildApp(options: Options = {}) {
         r.body as C.CreateOrder,
         r.headers['idempotency-key'] as string,
       );
+
       return respond(r, p, value.data, orderLinks(value.data), value.created ? 201 : 200);
     },
   );
@@ -771,6 +832,7 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       const orders = store.orders(r.sessionToken);
+
       return respond(r, p, orders, {
         self: link('/api/orders'),
         ...Object.fromEntries(orders.map((o) => [`order_${o.id}`, link(`/api/orders/${o.id}`)])),
@@ -792,6 +854,7 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       const o = store.order(r.sessionToken, r.params.orderId);
+
       return respond(r, p, o, orderLinks(o));
     },
   );
@@ -809,6 +872,7 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       const values = store.payments(r.sessionToken, r.params.orderId);
+
       return respond(r, p, values, {
         self: link(`/api/orders/${r.params.orderId}/payments`),
         order: link(`/api/orders/${r.params.orderId}`),
@@ -844,6 +908,7 @@ export async function buildApp(options: Options = {}) {
         r.params.orderId,
         r.headers['idempotency-key'] as string,
       );
+
       return respond(r, p, value.data, paymentLinks(value.data), value.created ? 201 : 200);
     },
   );
@@ -862,6 +927,7 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       const value = store.payment(r.sessionToken, r.params.paymentId);
+
       return respond(r, p, value, paymentLinks(value));
     },
   );
@@ -887,6 +953,7 @@ export async function buildApp(options: Options = {}) {
         r.params.paymentId,
         (r.body as Static<typeof C.SimulateBody>).scenario,
       );
+
       return respond(
         r,
         p,
@@ -909,9 +976,11 @@ export async function buildApp(options: Options = {}) {
     },
     (r, p) => {
       const value = store.simulation(r.sessionToken, r.params.paymentId, r.params.simulationId);
+
       return respond(r, p, value, simulationLinks(value));
     },
   );
   await app.ready();
+
   return app;
 }

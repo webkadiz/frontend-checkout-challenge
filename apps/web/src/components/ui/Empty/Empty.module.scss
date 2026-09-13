@@ -1,0 +1,46 @@
+.empty {
+  text-align: center;
+  padding: 100px 20px;
+}
+
+.emptySymbol {
+  font-size: 50px;
+  color: #7d8966;
+}
+
+.empty h2 {
+  font:
+    38px Georgia,
+    serif;
+  margin: 20px 0 15px;
+}
+
+.empty p {
+  margin-bottom: 25px;
+}
+
+.empty {
+  animation: reveal 0.55s ease both;
+}
+
+@media (width <= 650px) {
+  .empty {
+    padding: 75px 0;
+
+    & h2 {
+      font-size: 31px;
+    }
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

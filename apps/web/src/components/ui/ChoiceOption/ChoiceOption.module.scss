@@ -1,0 +1,70 @@
+.choice {
+  border: 1px solid #d6d9cf;
+  border-radius: 4px;
+  padding: 17px 14px;
+  flex: 1;
+  position: relative;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+
+  &.active {
+    border-color: #798866;
+    background: #f0f3e9;
+  }
+
+  & input {
+    accent-color: #526644;
+    margin: 0 8px 0 0;
+  }
+
+  & strong {
+    font-size: 12px;
+  }
+
+  & small {
+    display: block;
+    font-size: 11px;
+    color: #7e8477;
+    padding: 9px 0 0 23px;
+  }
+}
+
+.choice:has(input:focus-visible) {
+  outline: 3px solid #7a8a54;
+  outline-offset: 3px;
+}
+
+.choice:has(input:disabled) {
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice:hover:not(:has(input:disabled)) {
+    border-color: #8b9a75;
+    background: #edf1e4;
+    box-shadow: 0 3px 10px #35472f0a;
+  }
+}
+
+@media (width <= 1000px) {
+  .choice strong {
+    font-size: 11px;
+  }
+
+  .choice small {
+    padding-left: 0;
+  }
+}
+
+@media (width <= 650px) {
+  .choice {
+    padding: 15px 10px;
+
+    & small {
+      font-size: 10px;
+    }
+  }
+}

@@ -1,0 +1,31 @@
+.list {
+  margin: 23px 0 8px;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 15px;
+  font-size: 12px;
+
+  & dd {
+    margin: 0;
+    text-align: right;
+  }
+
+  & dt {
+    color: #79816e;
+  }
+}
+
+.prominent {
+  border-top: 1px solid #d6dccb;
+  padding-top: 20px;
+  margin-top: 20px;
+  font-size: 22px;
+
+  & dt {
+    color: #353e2b;
+  }
+}

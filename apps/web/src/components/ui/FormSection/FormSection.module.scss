@@ -1,0 +1,18 @@
+.section {
+  border: 0;
+  border-top: 1px solid #dedfd7;
+  padding: 24px 0 30px;
+  margin: 0;
+  min-width: 0;
+}
+
+.section legend {
+  font-size: 18px;
+  padding: 0 10px 0 0;
+
+  & > span {
+    font-size: 11px;
+    color: #929887;
+    margin-right: 14px;
+  }
+}
